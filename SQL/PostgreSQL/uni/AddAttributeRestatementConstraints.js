@@ -25,6 +25,7 @@ if(restatements) {
         while(attribute = anchor.nextAttribute()) {
             if(attribute.isHistorized()) {
                 var valueColumn, valueType;
+                
                 if(!attribute.isKnotted()) {
                     if(attribute.hasChecksum()) {
                         valueColumn = attribute.checksumColumnName;
@@ -45,7 +46,16 @@ if(restatements) {
 -- rf$attribute.name restatement finder, also used by the insert and update triggers for idempotent attributes
 -- rc$attribute.name restatement constraint (available only in attributes that cannot have restatements)
 -----------------------------------------------------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION \"rf$attribute.name\"(
+/*
+DROP FUNCTION IF EXISTS $attribute.capsule\.rf$attribute.name(
+    $anchor.identity,
+    $(attribute.isEquivalent())? $schema.metadata.equivalentRange,
+    $valueType,
+    $attribute.timeRange
+);
+*/
+
+CREATE OR REPLACE FUNCTION $attribute.capsule\.rf$attribute.name(
     id $anchor.identity,
     $(attribute.isEquivalent())? eq $schema.metadata.equivalentRange,
     value $valueType,
@@ -58,15 +68,15 @@ CREATE OR REPLACE FUNCTION \"rf$attribute.name\"(
             WHERE
                 value = (
                     SELECT
-                        pre.\"$valueColumn\"
+                        pre.$valueColumn
                     FROM
-                        $(attribute.isEquivalent())? \"e$attribute.name\"(eq) pre : \"$attribute.name\" pre
+                        $(attribute.isEquivalent())? $attribute.capsule\.e$attribute.name(eq) pre : $attribute.capsule\.$attribute.name pre
                     WHERE
-                        pre.\"$attribute.anchorReferenceName\" = id
+                        pre.$attribute.anchorReferenceName = id
                     AND
-                        pre.\"$attribute.changingColumnName\" < changed
+                        pre.$attribute.changingColumnName < changed
                     ORDER BY
-                        pre.\"$attribute.changingColumnName\" DESC
+                        pre.$attribute.changingColumnName DESC
                     LIMIT 1
             )
         )
@@ -76,15 +86,15 @@ CREATE OR REPLACE FUNCTION \"rf$attribute.name\"(
             WHERE
                 value = (
                     SELECT
-                        fol.\"$valueColumn\"
+                        fol.$valueColumn
                     FROM
-                        $(attribute.isEquivalent())? \"e$attribute.name\"(eq) fol : \"$attribute.name\" fol
+                        $(attribute.isEquivalent())? $attribute.capsule\.e$attribute.name(eq) fol : $attribute.capsule\.$attribute.name fol
                     WHERE
-                        fol.\"$attribute.anchorReferenceName\" = id
+                        fol.$attribute.anchorReferenceName = id
                     AND
-                        fol.\"$attribute.changingColumnName\" > changed
+                        fol.$attribute.changingColumnName > changed
                     ORDER BY
-                        fol.\"$attribute.changingColumnName\" ASC
+                        fol.$attribute.changingColumnName ASC
                     LIMIT 1
             )
         )
@@ -94,23 +104,25 @@ CREATE OR REPLACE FUNCTION \"rf$attribute.name\"(
         
         RETURN 0;
 ~*/
-                if(!attribute.isRestatable()) {
-/*~
-        ALTER TABLE \"$attribute.name\"
-        ADD CONSTRAINT \"rc$attribute.name\" CHECK (
-                \"rf$attribute.name\" (
-                \"$attribute.anchorReferenceName\",
-                $(attribute.isEquivalent())? \"$attribute.equivalentColumnName\",
-                \"$valueColumn\",
-                \"$attribute.changingColumnName\"
-            ) = 0
-        );
-~*/
-                }
+               
 /*~
     END;
 ' LANGUAGE plpgsql;
 ~*/
+                
+                if(!attribute.isRestatable()) {
+/*~
+ALTER TABLE $attribute.capsule\._$attribute.name
+ADD CONSTRAINT rc$attribute.name CHECK (
+    $attribute.capsule\.rf$attribute.name(
+        $attribute.anchorReferenceName,
+        $(attribute.isEquivalent())? $attribute.equivalentColumnName,
+        $valueColumn,
+        $attribute.changingColumnName
+    ) = 0
+);
+~*/
+                }
             }
         }
     }

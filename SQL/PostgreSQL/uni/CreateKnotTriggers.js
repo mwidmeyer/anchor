@@ -1,7 +1,7 @@
 /*~
 -- KNOT TRIGGERS ---------------------------------------------------------------------------------------------------
 --
--- The following triggers enable column casting and storing checksum values.
+-- The following triggers enable calculation and storing checksum values.
 --
 ~*/
 var knot;
@@ -10,47 +10,61 @@ while (knot = schema.nextKnot()) {
     if(knot.hasChecksum()) {
         if(schema.EQUIVALENCE && knot.isEquivalent()) {
 /*~
--- INSERT/UPDATE trigger ---------------------------------------------------------------------------------------------------------
-DROP TRIGGER IF EXISTS \"tcs$knot.equivalentName\" ON \"$knot.equivalentName\";
+-- DROP TRIGGER IF EXISTS tcs$knot.name ON $knot.capsule\._$knot.equivalentName;
+-- DROP FUNCTION IF EXISTS $knot.capsule\.tcs$knot.name();
 
-CREATE OR REPLACE FUNCTION \"tcs$knot.equivalentName\"() RETURNS trigger AS '
+CREATE OR REPLACE FUNCTION $knot.capsule\.tcs$knot.name() RETURNS trigger AS '
     BEGIN
-        IF pg_trigger_depth() <> 1 THEN
-            RETURN NEW;
+        IF (TG_OP = ''INSERT'') THEN
+            IF (NEW.$knot.checksumColumnName IS NULL) THEN
+                NEW.$knot.checksumColumnName = $schema.metadata.encapsulation\.$schema.metadata.checksumFunction(
+                    CAST(NEW.$knot.valueColumnName AS text)
+                );
+            END IF;
+        ELSIF (TG_OP = ''UPDATE'') THEN
+            IF (OLD.$knot.valueColumnName != NEW.$knot.valueColumnName) THEN
+                NEW.$knot.checksumColumnName = $schema.metadata.encapsulation\.$schema.metadata.checksumFunction(
+                    CAST(NEW.$knot.valueColumnName AS text)
+                );
+            END IF;
         END IF;
-
-        UPDATE \"$knot.equivalentName\" SET 
-            \"$knot.checksumColumnName\" = cast(substring(MD5(cast(NEW.\"$knot.valueColumnName\" as bytea)) for 16) as bytea)
-        WHERE \"$knot.identityColumnName\" = NEW.\"$knot.identityColumnName\";
+        
         RETURN NEW;
     END;
 ' LANGUAGE plpgsql;
 
-CREATE TRIGGER \"tcs$knot.equivalentName\"
-AFTER INSERT OR UPDATE ON \"$knot.equivalentName\"
-FOR EACH ROW EXECUTE PROCEDURE \"tcs$knot.equivalentName\"();
+CREATE TRIGGER tcs$knot.name
+BEFORE INSERT OR UPDATE OF $knot.valueColumnName ON $knot.capsule\._$knot.equivalentName
+FOR EACH ROW EXECUTE PROCEDURE $knot.capsule\.tcs$knot.name();
 ~*/
         } else {
 /*~
--- INSERT/UPDATE trigger ---------------------------------------------------------------------------------------------------------
-DROP TRIGGER IF EXISTS \"tcs$knot.name\" ON \"$knot.name\";
+-- DROP TRIGGER IF EXISTS tcs$knot.name ON $knot.capsule\._$knot.name;
+-- DROP FUNCTION IF EXISTS $knot.capsule\.tcs$knot.name();
 
-CREATE OR REPLACE FUNCTION \"tcs$knot.name\"() RETURNS trigger AS '
+CREATE OR REPLACE FUNCTION $knot.capsule\.tcs$knot.name() RETURNS trigger AS '
     BEGIN
-        IF pg_trigger_depth() <> 1 THEN
-            RETURN NEW;
+        IF (TG_OP = ''INSERT'') THEN
+            IF (NEW.$knot.checksumColumnName IS NULL) THEN
+                NEW.$knot.checksumColumnName = $schema.metadata.encapsulation\.$schema.metadata.checksumFunction(
+                    CAST(NEW.$knot.valueColumnName AS text)
+                );
+            END IF;
+        ELSIF (TG_OP = ''UPDATE'') THEN
+            IF (OLD.$knot.valueColumnName != NEW.$knot.valueColumnName) THEN
+                NEW.$knot.checksumColumnName = $schema.metadata.encapsulation\.$schema.metadata.checksumFunction(
+                    CAST(NEW.$knot.valueColumnName AS text)
+                );
+            END IF;
         END IF;
-
-        UPDATE \"$knot.name\" SET 
-            \"$knot.checksumColumnName\" = cast(substring(MD5(cast(NEW.\"$knot.valueColumnName\" as bytea)) for 16) as bytea)
-        WHERE \"$knot.identityColumnName\" = NEW.\"$knot.identityColumnName\";
+        
         RETURN NEW;
     END;
 ' LANGUAGE plpgsql;
 
-CREATE TRIGGER \"tcs$knot.name\"
-AFTER INSERT OR UPDATE ON \"$knot.name\"
-FOR EACH ROW EXECUTE PROCEDURE \"tcs$knot.name\"();
+CREATE TRIGGER tcs$knot.name
+BEFORE INSERT OR UPDATE OF $knot.valueColumnName ON $knot.capsule\._$knot.name
+FOR EACH ROW EXECUTE PROCEDURE $knot.capsule\.tcs$knot.name();
 ~*/
         }
     }

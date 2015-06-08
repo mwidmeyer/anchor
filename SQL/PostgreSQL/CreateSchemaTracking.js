@@ -9,85 +9,79 @@ if(schema.serialization) {
 -- Schema table -------------------------------------------------------------------------------------------------------
 -- The schema table holds every xml that has been executed against the database
 -----------------------------------------------------------------------------------------------------------------------
-IF Object_ID('$schema.metadata.encapsulation$._Schema', 'U') IS NULL
-   CREATE TABLE [$schema.metadata.encapsulation].[_Schema] (
-      [version] int identity(1, 1) not null primary key,
-      [activation] $schema.metadata.chronon not null,
-      [schema] xml not null
-   );
-GO
+CREATE TABLE IF NOT EXISTS _Schema (
+    version serial not null primary key,
+    activation $schema.metadata.chronon not null,
+    schema xml not null
+);
+   
 -- Insert the XML schema (as of now)
-INSERT INTO [$schema.metadata.encapsulation].[_Schema] (
-   [activation],
-   [schema]
+INSERT INTO _Schema (
+   activation,
+   schema
 )
 SELECT
-   current_timestamp,
-   N'$schema.serialization._serialization';
-GO
+   LOCALTIMESTAMP,
+   '$schema.serialization._serialization';
+
 -- Schema expanded view -----------------------------------------------------------------------------------------------
 -- A view of the schema table that expands the XML attributes into columns
 -----------------------------------------------------------------------------------------------------------------------
-IF Object_ID('$schema.metadata.encapsulation$._Schema_Expanded', 'V') IS NOT NULL
-DROP VIEW [$schema.metadata.encapsulation].[_Schema_Expanded]
-GO
+DROP VIEW IF EXISTS _Schema_Expanded;
 
-CREATE VIEW [$schema.metadata.encapsulation].[_Schema_Expanded]
-AS
+CREATE OR REPLACE VIEW _Schema_Expanded AS
 SELECT
-	[version],
-	[activation],
-	[schema],
-	[schema].value('schema[1]/@format', 'nvarchar(max)') as [format],
-	[schema].value('schema[1]/@date', 'date') as [date],
-	[schema].value('schema[1]/@time', 'time(0)') as [time],
-	[schema].value('schema[1]/metadata[1]/@temporalization', 'nvarchar(max)') as [temporalization], 
-	[schema].value('schema[1]/metadata[1]/@databaseTarget', 'nvarchar(max)') as [databaseTarget],
-	[schema].value('schema[1]/metadata[1]/@changingRange', 'nvarchar(max)') as [changingRange],
-	[schema].value('schema[1]/metadata[1]/@encapsulation', 'nvarchar(max)') as [encapsulation],
-	[schema].value('schema[1]/metadata[1]/@identity', 'nvarchar(max)') as [identity],
-	[schema].value('schema[1]/metadata[1]/@metadataPrefix', 'nvarchar(max)') as [metadataPrefix],
-	[schema].value('schema[1]/metadata[1]/@metadataType', 'nvarchar(max)') as [metadataType],
-	[schema].value('schema[1]/metadata[1]/@metadataUsage', 'nvarchar(max)') as [metadataUsage],
-	[schema].value('schema[1]/metadata[1]/@changingSuffix', 'nvarchar(max)') as [changingSuffix],
-	[schema].value('schema[1]/metadata[1]/@identitySuffix', 'nvarchar(max)') as [identitySuffix],
-	[schema].value('schema[1]/metadata[1]/@positIdentity', 'nvarchar(max)') as [positIdentity],
-	[schema].value('schema[1]/metadata[1]/@positGenerator', 'nvarchar(max)') as [positGenerator],
-	[schema].value('schema[1]/metadata[1]/@positingRange', 'nvarchar(max)') as [positingRange],
-	[schema].value('schema[1]/metadata[1]/@positingSuffix', 'nvarchar(max)') as [positingSuffix],
-	[schema].value('schema[1]/metadata[1]/@positorRange', 'nvarchar(max)') as [positorRange],
-	[schema].value('schema[1]/metadata[1]/@positorSuffix', 'nvarchar(max)') as [positorSuffix],
-	[schema].value('schema[1]/metadata[1]/@reliabilityRange', 'nvarchar(max)') as [reliabilityRange],
-	[schema].value('schema[1]/metadata[1]/@reliabilitySuffix', 'nvarchar(max)') as [reliabilitySuffix],
-	[schema].value('schema[1]/metadata[1]/@reliableCutoff', 'nvarchar(max)') as [reliableCutoff],
-	[schema].value('schema[1]/metadata[1]/@deleteReliability', 'nvarchar(max)') as [deleteReliability],
-	[schema].value('schema[1]/metadata[1]/@reliableSuffix', 'nvarchar(max)') as [reliableSuffix],
-	[schema].value('schema[1]/metadata[1]/@partitioning', 'nvarchar(max)') as [partitioning],
-	[schema].value('schema[1]/metadata[1]/@entityIntegrity', 'nvarchar(max)') as [entityIntegrity],
-	[schema].value('schema[1]/metadata[1]/@restatability', 'nvarchar(max)') as [restatability],
-	[schema].value('schema[1]/metadata[1]/@idempotency', 'nvarchar(max)') as [idempotency],
-	[schema].value('schema[1]/metadata[1]/@assertiveness', 'nvarchar(max)') as [assertiveness],
-	[schema].value('schema[1]/metadata[1]/@naming', 'nvarchar(max)') as [naming],
-	[schema].value('schema[1]/metadata[1]/@positSuffix', 'nvarchar(max)') as [positSuffix],
-	[schema].value('schema[1]/metadata[1]/@annexSuffix', 'nvarchar(max)') as [annexSuffix],
-	[schema].value('schema[1]/metadata[1]/@chronon', 'nvarchar(max)') as [chronon],
-	[schema].value('schema[1]/metadata[1]/@now', 'nvarchar(max)') as [now],
-	[schema].value('schema[1]/metadata[1]/@dummySuffix', 'nvarchar(max)') as [dummySuffix],
-	[schema].value('schema[1]/metadata[1]/@statementTypeSuffix', 'nvarchar(max)') as [statementTypeSuffix],
-	[schema].value('schema[1]/metadata[1]/@checksumSuffix', 'nvarchar(max)') as [checksumSuffix],
-	[schema].value('schema[1]/metadata[1]/@businessViews', 'nvarchar(max)') as [businessViews],
-	[schema].value('schema[1]/metadata[1]/@equivalence', 'nvarchar(max)') as [equivalence],
-	[schema].value('schema[1]/metadata[1]/@equivalentSuffix', 'nvarchar(max)') as [equivalentSuffix],
-	[schema].value('schema[1]/metadata[1]/@equivalentRange', 'nvarchar(max)') as [equivalentRange]
+	version,
+	activation,
+	schema,
+	(xpath('/schema[1]/@format[1]', schema))[1]::text as format,
+	(xpath('/schema[1]/@date[1]', schema))[1]::text as date,
+	(xpath('/schema[1]/@time[1]', schema))[1]::text as time,
+	(xpath('/schema[1]/metadata[1]/@temporalization[1]', schema))[1]::text as temporalization,
+	(xpath('/schema[1]/metadata[1]/@databaseTarget[1]', schema))[1]::text as databaseTarget,
+	(xpath('/schema[1]/metadata[1]/@changingRange[1]', schema))[1]::text as changingRange,
+	(xpath('/schema[1]/metadata[1]/@encapsulation[1]', schema))[1]::text as encapsulation,
+	(xpath('/schema[1]/metadata[1]/@identity[1]', schema))[1]::text as identity,
+	(xpath('/schema[1]/metadata[1]/@metadataPrefix[1]', schema))[1]::text as metadataPrefix,
+	(xpath('/schema[1]/metadata[1]/@metadataType[1]', schema))[1]::text as metadataType,
+	(xpath('/schema[1]/metadata[1]/@metadataUsage[1]', schema))[1]::text as metadataUsage,
+	(xpath('/schema[1]/metadata[1]/@changingSuffix[1]', schema))[1]::text as changingSuffix,
+	(xpath('/schema[1]/metadata[1]/@identitySuffix[1]', schema))[1]::text as identitySuffix,
+	(xpath('/schema[1]/metadata[1]/@positIdentity[1]', schema))[1]::text as positIdentity,
+	(xpath('/schema[1]/metadata[1]/@positGenerator[1]', schema))[1]::text as positGenerator,
+	(xpath('/schema[1]/metadata[1]/@positingRange[1]', schema))[1]::text as positingRange,
+	(xpath('/schema[1]/metadata[1]/@positingSuffix[1]', schema))[1]::text as positingSuffix,
+	(xpath('/schema[1]/metadata[1]/@positorRange[1]', schema))[1]::text as positorRange,
+	(xpath('/schema[1]/metadata[1]/@positorSuffix[1]', schema))[1]::text as positorSuffix,
+	(xpath('/schema[1]/metadata[1]/@reliabilityRange[1]', schema))[1]::text as reliabilityRange,
+	(xpath('/schema[1]/metadata[1]/@reliabilitySuffix[1]', schema))[1]::text as reliabilitySuffix,
+	(xpath('/schema[1]/metadata[1]/@reliableCutoff[1]', schema))[1]::text as reliableCutoff,
+	(xpath('/schema[1]/metadata[1]/@deleteReliability[1]', schema))[1]::text as deleteReliability,
+	(xpath('/schema[1]/metadata[1]/@reliableSuffix[1]', schema))[1]::text as reliableSuffix,
+	(xpath('/schema[1]/metadata[1]/@partitioning[1]', schema))[1]::text as partitioning,
+	(xpath('/schema[1]/metadata[1]/@entityIntegrity[1]', schema))[1]::text as entityIntegrity,
+	(xpath('/schema[1]/metadata[1]/@restatability[1]', schema))[1]::text as restatability,
+	(xpath('/schema[1]/metadata[1]/@idempotency[1]', schema))[1]::text as idempotency,
+	(xpath('/schema[1]/metadata[1]/@assertiveness[1]', schema))[1]::text as assertiveness,
+	(xpath('/schema[1]/metadata[1]/@naming[1]', schema))[1]::text as naming,
+	(xpath('/schema[1]/metadata[1]/@positSuffix[1]', schema))[1]::text as positSuffix,
+	(xpath('/schema[1]/metadata[1]/@annexSuffix[1]', schema))[1]::text as annexSuffix,
+	(xpath('/schema[1]/metadata[1]/@chronon[1]', schema))[1]::text as chronon,
+	(xpath('/schema[1]/metadata[1]/@now[1]', schema))[1]::text as now,
+	(xpath('/schema[1]/metadata[1]/@dummySuffix[1]', schema))[1]::text as dummySuffix,
+	(xpath('/schema[1]/metadata[1]/@statementTypeSuffix[1]', schema))[1]::text as statementTypeSuffix,
+	(xpath('/schema[1]/metadata[1]/@checksumSuffix[1]', schema))[1]::text as checksumSuffix,
+	(xpath('/schema[1]/metadata[1]/@businessViews[1]', schema))[1]::text as businessViews,
+	(xpath('/schema[1]/metadata[1]/@equivalence[1]', schema))[1]::text as equivalence,
+	(xpath('/schema[1]/metadata[1]/@equivalentSuffix[1]', schema))[1]::text as equivalentSuffix,
+	(xpath('/schema[1]/metadata[1]/@equivalentRange[1]', schema))[1]::text as equivalentRange
 FROM 
 	_Schema;
-GO
+
 -- Anchor view --------------------------------------------------------------------------------------------------------
 -- The anchor view shows information about all the anchors in a schema
 -----------------------------------------------------------------------------------------------------------------------
-IF Object_ID('$schema.metadata.encapsulation$._Anchor', 'V') IS NOT NULL
-DROP VIEW [$schema.metadata.encapsulation].[_Anchor]
-GO
+DROP VIEW IF EXISTS _Anchor;
 
 CREATE VIEW [$schema.metadata.encapsulation].[_Anchor]
 AS
@@ -105,13 +99,11 @@ FROM
    [$schema.metadata.encapsulation].[_Schema] S
 CROSS APPLY
    S.[schema].nodes('/schema/anchor') as Nodeset(anchor);
-GO
+
 -- Knot view ----------------------------------------------------------------------------------------------------------
 -- The knot view shows information about all the knots in a schema
 -----------------------------------------------------------------------------------------------------------------------
-IF Object_ID('$schema.metadata.encapsulation$._Knot', 'V') IS NOT NULL
-DROP VIEW [$schema.metadata.encapsulation].[_Knot]
-GO
+DROP VIEW IF EXISTS _Knot;
 
 CREATE VIEW [$schema.metadata.encapsulation].[_Knot]
 AS
@@ -131,13 +123,11 @@ FROM
    [$schema.metadata.encapsulation].[_Schema] S
 CROSS APPLY
    S.[schema].nodes('/schema/knot') as Nodeset(knot);
-GO
+
 -- Attribute view -----------------------------------------------------------------------------------------------------
 -- The attribute view shows information about all the attributes in a schema
 -----------------------------------------------------------------------------------------------------------------------
-IF Object_ID('$schema.metadata.encapsulation$._Attribute', 'V') IS NOT NULL
-DROP VIEW [$schema.metadata.encapsulation].[_Attribute]
-GO
+DROP VIEW IF EXISTS _Attribute;
 
 CREATE VIEW [$schema.metadata.encapsulation].[_Attribute]
 AS
@@ -170,13 +160,11 @@ CROSS APPLY
    S.[schema].nodes('/schema/anchor') as ParentNodeset(anchor)
 OUTER APPLY
    ParentNodeset.anchor.nodes('attribute') as Nodeset(attribute);
-GO
+
 -- Tie view -----------------------------------------------------------------------------------------------------------
 -- The tie view shows information about all the ties in a schema
 -----------------------------------------------------------------------------------------------------------------------
-IF Object_ID('$schema.metadata.encapsulation$._Tie', 'V') IS NOT NULL
-DROP VIEW [$schema.metadata.encapsulation].[_Tie]
-GO
+DROP VIEW IF EXISTS _Tie;
 
 CREATE VIEW [$schema.metadata.encapsulation].[_Tie]
 AS
@@ -217,7 +205,7 @@ FROM
    [$schema.metadata.encapsulation].[_Schema] S
 CROSS APPLY
    S.[schema].nodes('/schema/tie') as Nodeset(tie);
-GO
+
 -- Evolution function -------------------------------------------------------------------------------------------------
 -- The evolution function shows what the schema looked like at the given
 -- point in time with additional information about missing or added
